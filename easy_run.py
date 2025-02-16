@@ -78,19 +78,19 @@ def initial_config():  # Initial configuration for first time users
     config["canvas_api_key"] = input(">")
     defaults = yes_no("Use default options? (enter n for advanced config)")
     if defaults == True:
-        config["canvas_api_heading"] = "https://canvas.instructure.com"
+        config["canvas_api_heading"] = "https://canvas.wu.ac.at"
         config["todoist_task_priority"] = 1
         config["todoist_task_labels"] = []
         config["sync_null_assignments"] = True
         config["sync_locked_assignments"] = True
         config["sync_no_due_date_assignments"] = True
     if defaults == False:
-        custom_url = yes_no("Use default Canvas URL? (https://canvas.instructure.com)")
+        custom_url = yes_no("Use WU Canvas URL? (https://canvas.wu.ac.at)")
         if custom_url == True:
-            config["canvas_api_heading"] = "https://canvas.instructure.com"
+            config["canvas_api_heading"] = "https://canvas.wu.ac.at"
         if custom_url == False:
             print(
-                "Enter your custom Canvas URL: (example https://university.instructure.com)"
+                "Enter your custom Canvas URL: (example https://canvas.university.com)"
             )
             config["canvas_api_heading"] = input(">")
         advance_setup = yes_no(
@@ -383,16 +383,19 @@ def transfer_assignments_to_todoist():
 def add_new_task(assignment, project_id):
     global limit_reached
     try:
+        # Extract course id label from course name (assumes course name starts with the course id)
+        course_name = courses_id_name_dict[assignment["course_id"]]
+        course_id_label = course_name.split()[0] if course_name.split() else ""
+        # Combine existing labels with the course id label, avoiding duplicates
+        new_labels = config["todoist_task_labels"].copy() if "todoist_task_labels" in config else []
+        if course_id_label and course_id_label not in new_labels:
+            new_labels.append(course_id_label)
+            
         todoist_api.add_task(
-            content="["
-            + assignment["name"]
-            + "]("
-            + assignment["html_url"]
-            + ")"
-            + " Due",
+            content="[" + assignment["name"] + "](" + assignment["html_url"] + ")" + " Due",
             project_id=project_id,
             due_datetime=assignment["due_at"],
-            labels=config["todoist_task_labels"],
+            labels=new_labels,
             priority=config["todoist_task_priority"],
         )
     except Exception as error:
